@@ -30,6 +30,6 @@ version=$(apk $apk_args info "$package" \
 | awk '{print $1}' \
 | sed -es/^$package-//)
 
-echo '{"version":"'"$version"'"}' \
+echo '{"version":{"version":"'"$version"'"}}' \
 | jq . \
 >&3
