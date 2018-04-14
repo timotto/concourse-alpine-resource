@@ -6,6 +6,8 @@ set -o pipefail
 exec 3>&1 # make stdout available as fd 3 for the result
 exec 1>&2 # redirect all output to stderr for logging
 
+cd "$1"
+
 # Read inputs
 payload=$(mktemp $TMPDIR/request-payload.XXXXXX)
 cat > $payload <&0
@@ -29,6 +31,8 @@ version=$(apk $apk_args info "$package" \
 | head -n1 \
 | awk '{print $1}' \
 | sed -es/^$package-//)
+
+echo "$version" > version
 
 echo '{"version":{"version":"'"$version"'"}}' \
 | jq . \
