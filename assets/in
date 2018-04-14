@@ -1,3 +1,35 @@
 #!/bin/bash
 
-echo "{\"version\":{\"version\":\"none\"}}" | jq .
+set -e
+set -o pipefail
+
+exec 3>&1 # make stdout available as fd 3 for the result
+exec 1>&2 # redirect all output to stderr for logging
+
+# Read inputs
+payload=$(mktemp $TMPDIR/request-payload.XXXXXX)
+cat > $payload <&0
+
+package=$(jq -r '.source.package // ""' < $payload)
+branch=$(jq -r '.source.branch // "edge"' < $payload)
+repository=$(jq -r '.source.repository // "main"' < $payload)
+arch=$(jq -r '.source.arch // "x86_64"' < $payload)
+apk_args="--repositories-file /repo.list --root / --arch=$arch --allow-untrusted"
+
+if [ -z "$package" ]; then
+  echo "invalid payload (missing package)"
+  exit 1
+fi
+
+echo "http://dl-cdn.alpinelinux.org/alpine/${branch}/${repository}" > /repo.list
+
+apk $apk_args update
+
+version=$(apk $apk_args info "$package" \
+| head -n1 \
+| awk '{print $1}' \
+| sed -es/^$package-//)
+
+echo '{"version":"'"$version"'"}' \
+| jq . \
+>&3
